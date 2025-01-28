@@ -1,4 +1,4 @@
-#include "MyMathLib.hpp"
+#include "MyMathLib.h"
 
 TEST(MathTestCase, MathTestSqrt9)
 {
