@@ -1,20 +1,20 @@
-name: CI with Unit Tests and SonarQube
+name: Build
 
 on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
 
 jobs:
-  build_and_test:
+  build:
+    name: Build and analyze
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Se requiere para un mejor análisis en SonarQube
 
       - name: Install Dependencies
         run: |
@@ -54,7 +54,14 @@ jobs:
           path: build/coverage.xml
 
       - name: Run SonarScanner
+        uses: sonarsource/sonarqube-scan-action@v3
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          sonar-scanner -Dsonar.login=$SONAR_TOKEN
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+      # Opcional: Si deseas fallar el pipeline si la Quality Gate de Sonar es roja, descomenta:
+      # - name: Check SonarQube Quality Gate
+      #   uses: sonarsource/sonarqube-quality-gate-action@master
+      #   timeout-minutes: 5
+      #   env:
+      #     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
