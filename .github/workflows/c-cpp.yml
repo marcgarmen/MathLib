@@ -1,4 +1,4 @@
-name: Build and Test
+name: CI with Unit Tests and SonarQube
 
 on:
   push:
@@ -9,22 +9,39 @@ on:
       - main
 
 jobs:
-  build:
+  build_and_test:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout Repository
         uses: actions/checkout@v3
 
-      - name: Install dependencies
-        run: sudo apt-get install cmake g++ -y
+      - name: Install Dependencies
+        run: sudo apt-get install cmake g++ gcovr -y
 
-      - name: Configure and Build
+      - name: Configure CMake
         run: |
-          cmake -S . -B build -DENABLE_TESTING=ON
-          cmake --build build
+          mkdir -p build
+          cd build
+          cmake .. -DENABLE_TESTING=ON -DCODE_COVERAGE=ON
 
-      - name: Run Tests
+      - name: Build Project
+        run: |
+          cd build
+          cmake --build .
+
+      - name: Run Unit Tests
         run: |
           cd build
           ctest --output-on-failure
+
+      - name: Generate Coverage Report
+        run: |
+          cd build
+          make coverage
+
+      - name: Run SonarScanner
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          sonar-scanner -Dsonar.login=$SONAR_TOKEN
