@@ -17,7 +17,13 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Install Dependencies
-        run: sudo apt-get install cmake g++ gcovr -y
+        run: |
+          sudo apt-get update
+          sudo apt-get install cmake g++ gcovr -y
+          pip install gcovr || echo "gcovr installation failed"
+
+      - name: Verify gcovr Installation
+        run: gcovr --version || echo "gcovr not installed correctly"
 
       - name: Configure CMake
         run: |
@@ -38,7 +44,8 @@ jobs:
       - name: Generate Coverage Report
         run: |
           cd build
-          make coverage || echo "Coverage report failed"
+          make coverage || (echo "Coverage generation failed"; exit 1)
+          ls -l coverage.xml || echo "Coverage file not found"
 
       - name: Upload Coverage Report
         uses: actions/upload-artifact@v3
