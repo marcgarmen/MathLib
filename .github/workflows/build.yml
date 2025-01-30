@@ -1,30 +1,47 @@
-name: Build
+name: CI with Unit Tests and SonarQube
 
 on:
   push:
     branches:
       - main
-
+  pull_request:
+    branches:
+      - main
 
 jobs:
-  tests:
-      name: Run Unit Tests
-      runs-on: ubuntu-latest
-      steps:
-        # 1. Clonar el repositorio
-        - uses: actions/checkout@v4
-  
-        # 2. Instalar dependencias necesarias
-        - name: Install dependencies
-          run: |
-            sudo apt-get update
-            sudo apt-get install -y cmake build-essential
-  
-        # 3. Configurar, compilar y ejecutar las pruebas
-        - name: Configure, Build, and Test
-          run: |
-            mkdir build
-            cd build
-            cmake ..
-            cmake --build .
-            ctest --output-on-failure
+  build_and_test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Install Dependencies
+        run: sudo apt-get install cmake g++ gcovr -y
+
+      - name: Configure CMake
+        run: |
+          mkdir -p build
+          cd build
+          cmake .. -DENABLE_TESTING=ON -DCODE_COVERAGE=ON
+
+      - name: Build Project
+        run: |
+          cd build
+          cmake --build .
+
+      - name: Run Unit Tests
+        run: |
+          cd build
+          ctest --output-on-failure
+
+      - name: Generate Coverage Report
+        run: |
+          cd build
+          make coverage
+
+      - name: Run SonarScanner
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          sonar-scanner -Dsonar.login=$SONAR_TOKEN
