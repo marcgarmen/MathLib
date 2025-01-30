@@ -1,4 +1,4 @@
-name: Build
+name: Build and Test Workflow
 
 on:
   push:
@@ -6,62 +6,45 @@ on:
       - main
 
 jobs:
-  build:
-    name: Build and analyze
+  tests:
+    name: Run Unit Tests
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Se requiere para un mejor análisis en SonarQube
+      # 1. Clonar el repositorio
+      - uses: actions/checkout@v4
 
-      - name: Install Dependencies
+      # 2. Instalar dependencias necesarias
+      - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install cmake g++ gcovr -y
-          pip install gcovr || echo "gcovr installation failed"
+          sudo apt-get install -y cmake build-essential
 
-      - name: Verify gcovr Installation
-        run: gcovr --version || echo "gcovr not installed correctly"
-
-      - name: Configure CMake
+      # 3. Configurar, compilar y ejecutar las pruebas
+      - name: Configure, Build, and Test
         run: |
-          mkdir -p build
+          mkdir build
           cd build
-          cmake .. -DENABLE_TESTING=ON -DCODE_COVERAGE=ON
-
-      - name: Build Project
-        run: |
-          cd build
+          cmake ..
           cmake --build .
-
-      - name: Run Unit Tests
-        run: |
-          cd build
           ctest --output-on-failure
 
-      - name: Generate Coverage Report
-        run: |
-          cd build
-          make coverage || (echo "Coverage generation failed"; exit 1)
-          ls -l coverage.xml || echo "Coverage file not found"
+  build:
+    name: Build and Analyze
+    runs-on: ubuntu-latest
+    needs: tests  # Esto crea la conexión visual entre los jobs en GitHub Actions
 
-      - name: Upload Coverage Report
-        uses: actions/upload-artifact@v3
+    steps:
+      - uses: actions/checkout@v4
         with:
-          name: coverage-report
-          path: build/coverage.xml
+          fetch-depth: 0  # Necesario para análisis en SonarQube
 
-      - name: Run SonarScanner
-        uses: sonarsource/sonarqube-scan-action@v3
+      - uses: sonarsource/sonarqube-scan-action@v3
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
 
-      # Opcional: Si deseas fallar el pipeline si la Quality Gate de Sonar es roja, descomenta:
-      # - name: Check SonarQube Quality Gate
-      #   uses: sonarsource/sonarqube-quality-gate-action@master
+      # Opcional: Activar Quality Gate para fallar si no se cumplen estándares
+      # - uses: sonarsource/sonarqube-quality-gate-action@master
       #   timeout-minutes: 5
       #   env:
       #     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
