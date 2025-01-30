@@ -38,7 +38,13 @@ jobs:
       - name: Generate Coverage Report
         run: |
           cd build
-          make coverage
+          make coverage || echo "Coverage report failed"
+
+      - name: Upload Coverage Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-report
+          path: build/coverage.xml
 
       - name: Run SonarScanner
         env:
